@@ -7,39 +7,46 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        // ✅ Step 1: Check if Python is available
+        stage('Check Python') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Naveethakthar/My-app.git'
+                bat 'python --version'
+                bat 'pip --version'
             }
         }
 
-       stage('Build & Test') {
-    steps {
-        // Step 1: Create a virtual environment
-        bat 'python -m venv venv'
+        // Step 2: Checkout code from Git
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/Naveethakthar/my-app.git'
+            }
+        }
 
-        // Step 2: Activate venv and install pytest
-        bat 'call venv\\Scripts\\activate && pip install --upgrade pip && pip install pytest'
+        // Step 3: Build & Test using virtual environment
+        stage('Build & Test') {
+            steps {
+                // Create a virtual environment
+                bat 'python -m venv venv'
 
-        // Step 3: Run tests inside the virtual environment
-        bat 'call venv\\Scripts\\activate && pytest'
-    }
-}
+                // Activate venv and install pytest
+                bat 'call venv\\Scripts\\activate && pip install --upgrade pip && pip install pytest'
 
+                // Run tests inside the virtual environment
+                bat 'call venv\\Scripts\\activate && pytest'
+            }
+        }
 
+        // Step 4: SonarQube Analysis
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar') {
-                    bat '''
-                    sonar-scanner \
-                    -Dsonar.projectKey=simple-app \
-                    -Dsonar.sources=.
-                    '''
+                    bat 'sonar-scanner -Dsonar.projectKey=simple-app -Dsonar.sources=.'
                 }
             }
         }
 
+        // Step 5: Quality Gate
         stage('Quality Gate') {
             steps {
                 timeout(time: 1, unit: 'MINUTES') {
@@ -48,12 +55,14 @@ pipeline {
             }
         }
 
+        // Step 6: Docker Build
         stage('Docker Build') {
             steps {
-                bat 'docker build -t $DOCKER_IMAGE:latest .'
+                bat "docker build -t %DOCKER_IMAGE%:latest ."
             }
         }
 
+        // Step 7: Push to DockerHub
         stage('Push to DockerHub') {
             steps {
                 withCredentials([usernamePassword(
@@ -61,21 +70,22 @@ pipeline {
                     usernameVariable: 'USER',
                     passwordVariable: 'PASS'
                 )]) {
-                    bat '''
-                    echo $PASS | docker login -u $USER --password-stdin
-                    docker push $DOCKER_IMAGE:latest
-                    '''
+                    bat """
+                    echo %PASS% | docker login -u %USER% --password-stdin
+                    docker push %DOCKER_IMAGE%:latest
+                    """
                 }
             }
         }
 
+        // Step 8: Deploy Docker container
         stage('Deploy') {
             steps {
-                bat '''
-                docker stop simple-app || true
-                docker rm simple-app || true
-                docker run -d --name simple-app -p 5000:5000 $DOCKER_IMAGE:latest
-                '''
+                bat """
+                docker stop simple-app || echo Container not running
+                docker rm simple-app || echo Container not removed
+                docker run -d --name simple-app -p 5000:5000 %DOCKER_IMAGE%:latest
+                """
             }
         }
     }
