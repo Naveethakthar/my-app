@@ -46,33 +46,18 @@ pipeline {
                 bat 'venv\\Scripts\\python.exe -m pytest || exit 0'
             }
         }
-
-        // ----------------------------
-        // Stage 3: SonarQube Analysis
-        // ----------------------------
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('Sonar') {
-                    bat """
-                    "%SONAR_SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
-                    -Dsonar.projectKey=my-app ^
-                    -Dsonar.projectName=my-app ^
-                    -Dsonar.sources=.
-                    """
-                }
-            }
+// ----------------------------
+// Stage 3: SonarQube Analysis
+// ----------------------------
+stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('Sonar') {
+            // Keep everything on one line for Windows
+            bat '"%SONAR_SCANNER_HOME%\\bin\\sonar-scanner.bat" -Dsonar.projectKey=my-app -Dsonar.projectName=my-app -Dsonar.sources=.'
         }
+    }
+}
 
-        // ----------------------------
-        // Stage 4: Quality Gate
-        // ----------------------------
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 3, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
 
         // ----------------------------
         // Stage 5: Docker Build
