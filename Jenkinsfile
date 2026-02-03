@@ -16,7 +16,7 @@ pipeline {
 
         stage('Build & Test') {
             steps {
-                sh '''
+                bat '''
                 pip install pytest
                 pytest
                 '''
@@ -26,7 +26,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar') {
-                    sh '''
+                    bat '''
                     sonar-scanner \
                     -Dsonar.projectKey=simple-app \
                     -Dsonar.sources=.
@@ -45,7 +45,7 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE:latest .'
+                bat 'docker build -t $DOCKER_IMAGE:latest .'
             }
         }
 
@@ -56,7 +56,7 @@ pipeline {
                     usernameVariable: 'USER',
                     passwordVariable: 'PASS'
                 )]) {
-                    sh '''
+                    bat '''
                     echo $PASS | docker login -u $USER --password-stdin
                     docker push $DOCKER_IMAGE:latest
                     '''
@@ -66,7 +66,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh '''
+                bat '''
                 docker stop simple-app || true
                 docker rm simple-app || true
                 docker run -d --name simple-app -p 5000:5000 $DOCKER_IMAGE:latest
