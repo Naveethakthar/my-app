@@ -54,7 +54,7 @@ pipeline {
         // ----------------------------
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonar') {
+                withSonarQubeEnv('Sonar') {
                     bat '''
                     sonar-scanner ^
                     -Dsonar.projectKey=simple-app ^
