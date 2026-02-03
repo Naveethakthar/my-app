@@ -58,6 +58,7 @@ pipeline {
             bat """
             "%SONAR_SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
             -Dsonar.projectKey=my-app ^
+            -Dsonar.projectName=my-app ^
             -Dsonar.sources=.
             """
         }
