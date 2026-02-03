@@ -14,14 +14,19 @@ pipeline {
             }
         }
 
-        stage('Build & Test') {
-            steps {
-                bat '''
-                pip install pytest
-                pytest
-                '''
-            }
-        }
+       stage('Build & Test') {
+    steps {
+        // Step 1: Create a virtual environment
+        bat 'python -m venv venv'
+
+        // Step 2: Activate venv and install pytest
+        bat 'call venv\\Scripts\\activate && pip install --upgrade pip && pip install pytest'
+
+        // Step 3: Run tests inside the virtual environment
+        bat 'call venv\\Scripts\\activate && pytest'
+    }
+}
+
 
         stage('SonarQube Analysis') {
             steps {
