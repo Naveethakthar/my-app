@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "naveethakthar/simple-app"
+        DOCKER_IMAGE = "naveethakthar/my-app"
     }
 
     stages {
@@ -52,16 +52,16 @@ pipeline {
         // ----------------------------
         // Stage 3: SonarQube Analysis
         // ----------------------------
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('Sonar') {
-                    bat '''
-                    sonar-scanner ^
-                    -Dsonar.projectKey=simple-app ^
-                    -Dsonar.sources=.
-                    '''
-                }
-            }
+       stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('Sonar') {
+            bat """
+            "%SONAR_SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
+            -Dsonar.projectKey=my-app ^
+            -Dsonar.sources=.
+            """
+        }
+    }
         }
 
         // ----------------------------
@@ -108,9 +108,9 @@ pipeline {
         stage('Deploy') {
             steps {
                 bat '''
-                docker stop simple-app || true
-                docker rm simple-app || true
-                docker run -d --name simple-app -p 5000:5000 %DOCKER_IMAGE%:latest
+                docker stop my-app || true
+                docker rm my-app || true
+                docker run -d --name my-app -p 5000:5000 %DOCKER_IMAGE%:latest
                 '''
             }
         }
