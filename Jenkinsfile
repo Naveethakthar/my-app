@@ -33,36 +33,34 @@ pipeline {
         // ----------------------------
         // Stage 2: Build & Test
         // ----------------------------
-      stage('Build & Test') {
-    steps {
-        // Create virtual environment
-        bat 'python -m venv venv'
+        stage('Build & Test') {
+            steps {
+                echo "Creating virtual environment..."
+                bat 'python -m venv venv'
 
-        // Install pytest using venv python (NO pip upgrade)
-        bat 'venv\\Scripts\\python.exe -m pip install pytest'
+                echo "Upgrading pip and installing pytest..."
+                bat 'venv\\Scripts\\python.exe -m pip install --upgrade pip'
+                bat 'venv\\Scripts\\python.exe -m pip install pytest'
 
-        // Run tests (safe even if no tests exist)
-        bat 'venv\\Scripts\\python.exe -m pytest || exit 0'
-    }
-}
-
-
-
+                echo "Running tests..."
+                bat 'venv\\Scripts\\python.exe -m pytest || exit 0'
+            }
+        }
 
         // ----------------------------
         // Stage 3: SonarQube Analysis
         // ----------------------------
-       stage('SonarQube Analysis') {
-    steps {
-        withSonarQubeEnv('Sonar') {
-            bat """
-            "%SONAR_SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
-            -Dsonar.projectKey=my-app ^
-            -Dsonar.projectName=my-app ^
-            -Dsonar.sources=.
-            """
-        }
-    }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('Sonar') {
+                    bat """
+                    "%SONAR_SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
+                    -Dsonar.projectKey=my-app ^
+                    -Dsonar.projectName=my-app ^
+                    -Dsonar.sources=.
+                    """
+                }
+            }
         }
 
         // ----------------------------
@@ -70,7 +68,7 @@ pipeline {
         // ----------------------------
         stage('Quality Gate') {
             steps {
-                timeout(time: 1, unit: 'MINUTES') {
+                timeout(time: 3, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -95,10 +93,7 @@ pipeline {
                     usernameVariable: 'USER',
                     passwordVariable: 'PASS'
                 )]) {
-                    bat '''
-                    echo %PASS% | docker login -u %USER% --password-stdin
-                    docker push %DOCKER_IMAGE%:latest
-                    '''
+                    bat "echo %PASS% | docker login -u %USER% --password-stdin && docker push %DOCKER_IMAGE%:latest"
                 }
             }
         }
@@ -108,13 +103,27 @@ pipeline {
         // ----------------------------
         stage('Deploy') {
             steps {
+                // Stop container if running (Windows cmd compatible)
                 bat '''
-                docker stop my-app || true
-                docker rm my-app || true
+                docker stop my-app
+                if errorlevel 1 echo "Container not running, skipping stop"
+
+                docker rm my-app
+                if errorlevel 1 echo "Container does not exist, skipping rm"
+
                 docker run -d --name my-app -p 5000:5000 %DOCKER_IMAGE%:latest
                 '''
             }
         }
 
     } // end stages
+
+    post {
+        success {
+            echo '🎉 Build, SonarQube analysis, and deployment completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed. Check the logs for details.'
+        }
+    }
 }
