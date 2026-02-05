@@ -6,6 +6,12 @@ pipeline {
     }
 
     stages {
+        stage('Clean Workspace') {
+    steps {
+        cleanWs()
+    }
+}
+
 
         // ----------------------------
         // Stage 0: Check Python & pip
