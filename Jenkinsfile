@@ -51,11 +51,15 @@ pipeline {
 // ----------------------------
 stage('SonarQube Analysis') {
     steps {
-        withSonarQubeEnv('Sonar') {
-            bat "...sonar-scanner..."
+        script {
+            def scannerHome = tool 'Sonar'
+            withSonarQubeEnv('Sonar') {
+                bat "\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.projectKey=my-app -Dsonar.projectName=my-app -Dsonar.sources=."
+            }
         }
     }
 }
+
 
 
 
