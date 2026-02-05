@@ -52,11 +52,11 @@ pipeline {
 stage('SonarQube Analysis') {
     steps {
         withSonarQubeEnv('Sonar') {
-            // Keep everything on one line for Windows
-            bat '"%SONAR_SCANNER_HOME%\\bin\\sonar-scanner.bat" -Dsonar.projectKey=my-app -Dsonar.projectName=my-app -Dsonar.sources=.'
+            bat "...sonar-scanner..."
         }
     }
 }
+
 
 
         // ----------------------------
