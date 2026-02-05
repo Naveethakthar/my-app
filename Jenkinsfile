@@ -38,30 +38,38 @@ pipeline {
                 echo "Creating virtual environment..."
                 bat 'python -m venv venv'
 
-                echo "Upgrading pip and installing pytest..."
-                bat 'venv\\Scripts\\python.exe -m pip install --upgrade pip'
+                echo "Installing pytest..."
                 bat 'venv\\Scripts\\python.exe -m pip install pytest'
 
                 echo "Running tests..."
                 bat 'venv\\Scripts\\python.exe -m pytest || exit 0'
             }
         }
-// ----------------------------
-// Stage 3: SonarQube Analysis
-// ----------------------------
-stage('SonarQube Analysis') {
-    steps {
-        script {
-            def scannerHome = tool 'Sonar'
-            withSonarQubeEnv('Sonar') {
-                bat "\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.projectKey=my-app -Dsonar.projectName=my-app -Dsonar.sources=."
+
+        // ----------------------------
+        // Stage 3: SonarQube Analysis
+        // ----------------------------
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'Sonar'
+                    withSonarQubeEnv('Sonar') {
+                        bat "\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.projectKey=my-app -Dsonar.projectName=my-app -Dsonar.sources=."
+                    }
+                }
             }
         }
-    }
-}
 
-
-
+        // ----------------------------
+        // Stage 4: Quality Gate
+        // ----------------------------
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
         // ----------------------------
         // Stage 5: Docker Build
@@ -82,7 +90,10 @@ stage('SonarQube Analysis') {
                     usernameVariable: 'USER',
                     passwordVariable: 'PASS'
                 )]) {
-                    bat "echo %PASS% | docker login -u %USER% --password-stdin && docker push %DOCKER_IMAGE%:latest"
+                    bat '''
+                    echo %PASS% | docker login -u %USER% --password-stdin
+                    docker push %DOCKER_IMAGE%:latest
+                    '''
                 }
             }
         }
@@ -92,27 +103,21 @@ stage('SonarQube Analysis') {
         // ----------------------------
         stage('Deploy') {
             steps {
-                // Stop container if running (Windows cmd compatible)
                 bat '''
-                docker stop my-app
-                if errorlevel 1 echo "Container not running, skipping stop"
-
-                docker rm my-app
-                if errorlevel 1 echo "Container does not exist, skipping rm"
-
+                docker stop my-app || true
+                docker rm my-app || true
                 docker run -d --name my-app -p 5000:5000 %DOCKER_IMAGE%:latest
                 '''
             }
         }
-
-    } // end stages
+    }
 
     post {
         success {
-            echo '🎉 Build, SonarQube analysis, and deployment completed successfully!'
+            echo "✅ Pipeline completed successfully!"
         }
         failure {
-            echo '❌ Pipeline failed. Check the logs for details.'
+            echo "❌ Pipeline failed. Check the logs."
         }
     }
 }
